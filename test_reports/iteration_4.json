@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 4 regression after slimming /app/backend/requirements.txt to the 6 imported packages. Backend: 11/11 pytest passing (added 5 new tests: health->database:connected, quote multipart image upload + /api/files/{id} byte-for-byte retrieval + persistence in /api/admin/quotes, unknown file 404, invalid collection 404, /api/public payload shape with settings.company_name). Auth 200/401, admin CRUD, dashboard metrics auth guard all pass. Frontend smoke: public site loads (hero, services, gallery, FAQ, WhatsApp CTAs), quote form with photo attachment submits and shows [data-testid=quote-success-message], admin login with real creds -> dashboard (12 leads / 9 quotes) and all 7 admin tabs load, zero console errors, no api-config-warning banner. Found and fixed a real deploy blocker: motor==3.3.1 with no pymongo pin resolved to pymongo 4.17.0 on a clean install (Render), which is incompatible with motor 3.3.x (ImportError _QUERY_OPTIONS from pymongo.cursor). Pinned pymongo==4.6.3 (the version already working locally); dry-run resolution now clean.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "requirements.txt (deploy)", "issue": "motor==3.3.1 was unpinned against pymongo -> clean install picked pymongo 4.17.0, which breaks motor 3.3.x at import time. Fixed by testing agent with pymongo==4.6.3 pin. Main agent may prefer motor>=3.6 (or PyMongo Async driver) long-term since Motor is EOL for features since May-2026."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Admin > Orçamentos list", "issue": "Quote rows only render title/description via the generic CRUD list; phone, vehicle, interest and attached photo thumbnails (/api/files/{id}) are not shown, and an 'Adicionar Orçamento' (título/descrição) form is offered for a lead collection. Pre-existing, not a regression.", "selector": "admin quotes list", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_dinho_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Keep the pymongo==4.6.3 pin in requirements.txt (added by testing agent) or upgrade to motor>=3.6 — without a pin the Render deploy will crash at startup with an ImportError even though resolution succeeds.",
+    "Optional: enrich admin quote cards with phone/vehicle/photo thumbnails instead of the generic title/description CRUD row."
+  ],
+  "critical_code_review_comments": [
+    "requirements.txt pinning transitive-critical deps: motor pins only pymongo>=4.5,<5, so pip will always take the newest pymongo on a fresh build; any driver like motor needs its companion pinned explicitly.",
+    "server.py still uses deprecated @app.on_event('startup'/'shutdown') — will break on FastAPI 1.x; migrate to lifespan.",
+    "State-based routing (pathname read once, no pushState) means /admin navigation from the site does not update the URL (carried over from iteration 3)."
+  ],
+  "updated_files": ["/app/backend/tests/test_dinho_api.py", "/app/backend/requirements.txt"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "TEST_Ana, TEST_Upload (deleted by test), and one UI quote 'TEST_QA Iter4' with a 1px PNG attachment left in quotes/leads/files collections.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@dinhorodas.com / Dinho#2026 (from /app/memory/test_credentials.md) - works",
+  "context_for_next_testing_agent": "Backend suite is /app/backend/tests/test_dinho_api.py (11 tests, run with pytest from /app, pytest.ini at /app/backend). Slim requirements.txt = fastapi, uvicorn, motor, pymongo(pin added), pydantic, python-dotenv, python-multipart; verify with `pip install --dry-run --ignore-installed -r requirements.txt` before deploy claims. Frontend testids for the quote form: quote-name-input/quote-phone-input/quote-vehicle-input/quote-year-input/quote-message-input/quote-photo-input/quote-submit-button/quote-success-message; admin: login-email/login-password/login-submit.",
+  "rca_of_the_issue": "The original ResolutionImpossible came from unused template deps (protobuf vs google-ai-generativelanguage). Slimming fixed resolution, but dropping the old explicit pymongo pin re-introduced a latent runtime failure: pip resolves pymongo 4.17.0 which removed internals motor 3.3.1 imports. Local env still had pymongo 4.6.3 installed, so the bug was invisible locally; re-pinning pymongo==4.6.3 restores parity between local and clean-build environments."
+}
