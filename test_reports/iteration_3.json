@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 3 regression after the Netlify/undefined-API bugfix. Backend: 6/6 pytest passing (added /api/health check and JSON-error-shape check for login). Frontend: public site (hero, 3 services, quote form), quote submission, admin login with correct creds -> dashboard + tab navigation (quotes: 7 records), wrong creds -> backend message 'E-mail ou senha inválidos', simulated non-JSON (HTML 404) login response -> 'Resposta inválida do servidor...' (no 'Unexpected token <' crash), simulated network failure -> 'Não foi possível conectar ao backend...'. /admin deep link renders login form. netlify.toml + public/_redirects present and correctly configured (publish resolves to frontend/build, SPA fallback 200).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_dinho_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "The !API guard only exists in Admin.doLogin. Public component fetches (`${API}/api/public`, /api/leads/click, /api/quotes) still build 'undefined/api/...' and fail silently via .catch(()=>{}) when REACT_APP_BACKEND_URL is missing — consider showing a visible banner so a misconfigured Netlify build is obvious on the public site too (non-blocking).",
+    "Routing is state-based (window.location.pathname read once, no history.pushState). Navigating to /admin from the site does not change the URL, so browser back/refresh loses the admin view. Minor UX, not part of this bugfix.",
+    "App.js is a single dense file with very long lines; splitting Public/Admin into modules would improve maintainability."
+  ],
+  "updated_files": ["/app/backend/tests/test_dinho_api.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "One TEST_ quote via API test and one 'TEST_QA Iter3' quote via UI form submission (leftover records in quotes collection).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@dinhorodas.com / Dinho#2026 (from /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Backend untouched since iteration 2; tests live in /app/backend/tests/test_dinho_api.py (now 6 tests incl. health + login-error JSON shape). Error-path login tests are done via Playwright page.route interception (fulfill HTML 404 / abort). Note: page.goto with an active route interception timed out on 'load'; use page.reload(wait_until='domcontentloaded') instead.",
+  "rca_of_the_issue": "Original 404 /undefined/api/auth/login came from a missing REACT_APP_BACKEND_URL at Netlify build time. Fixes verified: explicit API-undefined guard, text()-then-JSON.parse with a friendly fallback message, and SPA redirects. All error paths render inside [data-testid=login-error] without crashing."
+}

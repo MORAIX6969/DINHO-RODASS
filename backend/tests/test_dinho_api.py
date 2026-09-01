@@ -46,3 +46,17 @@ def test_dashboard_metrics_auth_and_shape():
 def test_admin_rejects_invalid_token():
     r = requests.get(f"{BASE_URL}/api/admin/services", headers={"Authorization": "Bearer notavalidtoken"}, timeout=20)
     assert r.status_code in (401, 403), r.status_code
+
+# Health endpoint (added iteration 3 - deploy config bugfix verification)
+def test_health_ok():
+    r = requests.get(f"{BASE_URL}/api/health", timeout=20)
+    assert r.status_code == 200, r.text[:300]
+    body = r.json()
+    assert body.get("status") == "ok", body
+
+# Login error responses must be JSON with a `detail` message (frontend renders d.detail)
+def test_login_error_is_json_with_detail():
+    r = requests.post(f"{BASE_URL}/api/auth/login", json={"email":"admin@dinhorodas.com", "password":"wrongpass"}, timeout=20)
+    assert r.status_code == 401
+    assert "application/json" in r.headers.get("content-type", "")
+    assert isinstance(r.json().get("detail"), str) and r.json()["detail"]

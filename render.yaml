@@ -1,0 +1,28 @@
+# Render.com Blueprint (opção sem Koyeb)
+# 1. Faça push do repositório no GitHub
+# 2. Em Render → New → Blueprint → aponte para o repositório
+# 3. Preencha as variáveis marcadas como sync:false na aba Environment
+# 4. Após deploy, copie a URL do serviço (ex.: https://dinho-rodas-api.onrender.com)
+#    e defina REACT_APP_BACKEND_URL no Netlify com esse valor.
+services:
+  - type: web
+    name: dinho-rodas-api
+    env: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URL
+        sync: false            # cole a connection string do MongoDB Atlas
+      - key: DB_NAME
+        sync: false            # ex.: dinho_rodas
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TOKEN_SECRET
+        generateValue: true    # Render gera um valor seguro automaticamente
+      - key: CORS_ORIGINS
+        sync: false            # ex.: https://seu-site.netlify.app

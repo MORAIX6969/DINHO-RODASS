@@ -1,0 +1,27 @@
+[build]
+  base    = "frontend"
+  publish = "build"
+  command = "yarn install --frozen-lockfile && yarn build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  CI = "false"
+
+# SPA fallback: rotas do React (ex.: /admin) devem servir index.html
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
+
+# Cabeçalhos básicos
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options    = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy    = "strict-origin-when-cross-origin"
+
+# IMPORTANTE:
+# Defina no Netlify → Site settings → Environment variables:
+#   REACT_APP_BACKEND_URL = https://<seu-backend-publicado>
+# (sem barra final). Depois refaça o deploy.
