@@ -101,3 +101,120 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Surgical fix verification for Dinho Rodas backend - verify Services/Gallery separation and new upload endpoint functionality"
+
+backend:
+  - task: "Health endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/health returns {status: ok, database: connected} correctly. Status 200."
+  
+  - task: "Admin authentication"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/auth/login with admin credentials returns valid token. Authentication working correctly."
+  
+  - task: "Services CRUD operations"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "All CRUD operations verified: CREATE service with POST /api/admin/services (✓), READ with GET /api/admin/services (✓), UPDATE with PUT /api/admin/services/{id} (✓), DELETE with DELETE /api/admin/services/{id} (✓). Service appears in services collection and public endpoint services array. No cross-contamination with gallery collection detected."
+  
+  - task: "Gallery upload endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/admin/upload working correctly: accepts PNG/JPG/WEBP (✓), rejects invalid file types with 400 (✓), requires authentication - returns 401 without token (✓), returns {id, url, content_type, size} (✓). File retrieval via GET /api/files/{id} works (✓). Gallery items created with uploaded images appear only in gallery collection, not in services (✓)."
+  
+  - task: "Services and Gallery separation"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Complete separation verified: Services created via POST /api/admin/services appear ONLY in services collection and public endpoint services array (✓). Gallery items created via POST /api/admin/gallery appear ONLY in gallery collection and public endpoint gallery array (✓). No cross-contamination detected in either direction (✓)."
+  
+  - task: "Settings endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/settings returns all required fields (company_name, phone, whatsapp, address, hours, maps_url, instagram) (✓). PUT /api/settings with authentication preserves all values in round-trip test (✓). No regressions detected."
+  
+  - task: "Quote form submission"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/quotes accepts form data (name, phone, vehicle, year, interest, message) and creates lead successfully (✓). Returns created lead with id (✓). Status 200."
+
+frontend:
+  - task: "Frontend testing"
+    implemented: true
+    working: "NA"
+    file: "N/A"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Frontend testing not performed as per testing agent instructions - backend testing only."
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "All backend endpoints verified"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "testing"
+    message: "Surgical fix verification completed successfully. All 6 test categories passed (18 individual test cases). Health endpoint (✓), Admin login (✓), Services CRUD with full separation from gallery (✓), Gallery upload endpoint with proper validation and auth (✓), Settings endpoint with round-trip preservation (✓), Quote form submission (✓). No regressions detected. Services and Gallery collections are completely independent - no cross-contamination in either direction. The surgical fix was successful."

@@ -134,6 +134,21 @@ async def get_file(file_id:str):
     if not record: raise HTTPException(404,'Arquivo não encontrado')
     return Response(base64.b64decode(record['content']), media_type=record.get('content_type','image/jpeg'))
 
+ALLOWED_UPLOAD_TYPES={'image/png','image/jpeg','image/jpg','image/webp'}
+
+@api.post('/admin/upload')
+async def admin_upload(file: UploadFile=File(...), authorization: Optional[str]=Header(None)):
+    require_auth(authorization)
+    ctype=(file.content_type or '').lower()
+    if ctype not in ALLOWED_UPLOAD_TYPES:
+        raise HTTPException(400,'Formato não suportado. Envie PNG, JPG ou WEBP.')
+    contents=await file.read()
+    if len(contents) > 15*1024*1024:
+        raise HTTPException(400,'Arquivo maior que 15MB.')
+    file_id=str(uuid.uuid4())
+    await db.files.insert_one({'id':file_id,'content':base64.b64encode(contents).decode(),'content_type':ctype,'original_filename':file.filename,'created_at':now(),'source':'admin_upload'})
+    return {'id':file_id,'url':f'/api/files/{file_id}','content_type':ctype,'size':len(contents)}
+
 @api.post('/leads/click')
 async def whatsapp_click(data: Item):
     row={**data.model_dump(),'id':str(uuid.uuid4()),'status':'Novo','created_at':now()}
