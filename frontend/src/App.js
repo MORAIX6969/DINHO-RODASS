@@ -142,20 +142,43 @@ const SERVICE_FIELDS=[['title','Título','text'],['category','Categoria (opciona
 
 function AdminServices({items,token,reload}){
     const [draft,setDraft]=useState({title:'',category:'',description:'',image_url:''});
+    const [file,setFile]=useState(null);
+    const [preview,setPreview]=useState('');
     const [editing,setEditing]=useState(null);
     const [saving,setSaving]=useState(false);
+    const [progress,setProgress]=useState('');
     const [message,setMessage]=useState('');
+    const onPick=e=>{
+        const f=e.target.files&&e.target.files[0];
+        if(!f){setFile(null);setPreview('');return;}
+        if(!/^image\/(png|jpe?g|webp)$/i.test(f.type)){setMessage('Formato não suportado. Use PNG, JPG ou WEBP.');return;}
+        if(f.size>15*1024*1024){setMessage('Arquivo maior que 15MB.');return;}
+        setMessage('');setFile(f);setPreview(URL.createObjectURL(f));
+    };
+    const uploadFile=async(f)=>{
+        const fd=new FormData();fd.append('file',f);
+        const r=await fetch(`${API}/api/admin/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+        if(!r.ok){const t=await r.text();throw new Error(t||'Falha no upload');}
+        return r.json();
+    };
     const create=async e=>{
         e.preventDefault();
         if(!draft.title.trim()||!draft.description.trim()){setMessage('Informe título e descrição do serviço.');return;}
-        setSaving(true);setMessage('');
-        const payload={title:draft.title.trim(),category:(draft.category||'').trim(),description:draft.description.trim(),image_url:(draft.image_url||'').trim(),active:true};
+        setSaving(true);setMessage('');setProgress('');
         try{
+            let image_url=(draft.image_url||'').trim();
+            if(file){
+                setProgress('Enviando imagem...');
+                const up=await uploadFile(file);
+                image_url=up.url;
+            }
+            setProgress('Salvando serviço...');
+            const payload={title:draft.title.trim(),category:(draft.category||'').trim(),description:draft.description.trim(),image_url,active:true};
             const r=await fetch(`${API}/api/admin/services`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)});
-            if(r.ok){setDraft({title:'',category:'',description:'',image_url:''});setMessage('Serviço criado com sucesso.');reload();}
+            if(r.ok){setDraft({title:'',category:'',description:'',image_url:''});setFile(null);setPreview('');setMessage('Serviço criado com sucesso.');reload();}
             else setMessage('Não foi possível criar o serviço.');
-        }catch{setMessage('Sem conexão com o backend.');}
-        finally{setSaving(false);}
+        }catch(err){setMessage(err.message||'Sem conexão com o backend.');}
+        finally{setSaving(false);setProgress('');}
     };
     const save=async(id,patch)=>{setSaving(true);try{const r=await fetch(`${API}/api/admin/services/${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(patch)});if(r.ok){setMessage('Atualizado.');setEditing(null);reload();}else setMessage('Falha ao atualizar.');}catch{setMessage('Sem conexão.');}finally{setSaving(false);}};
     const remove=async id=>{if(!window.confirm('Excluir este serviço?'))return;try{await fetch(`${API}/api/admin/services/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});reload();}catch{}};
@@ -165,7 +188,16 @@ function AdminServices({items,token,reload}){
             <input type="text" placeholder="Título" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} data-testid="service-title-input"/>
             <input type="text" placeholder="Categoria (opcional)" value={draft.category} onChange={e=>setDraft({...draft,category:e.target.value})} data-testid="service-category-input"/>
             <textarea placeholder="Descrição" value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})} data-testid="service-description-input"/>
-            <input type="text" placeholder="URL da imagem (opcional)" value={draft.image_url} onChange={e=>setDraft({...draft,image_url:e.target.value})} data-testid="service-image-input"/>
+            <label className="file" style={{display:'flex',alignItems:'center',gap:12,border:'1px dashed #bbb',padding:16,color:'#555',position:'relative',cursor:'pointer'}}>
+                <Upload size={18}/>
+                <span>{file?file.name:'Selecionar imagem do computador (opcional)'} <small style={{display:'block',color:'#999',fontWeight:400,textTransform:'none',letterSpacing:0,marginTop:4}}>PNG, JPG ou WEBP · até 15MB</small></span>
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onPick} data-testid="service-file-input" style={{position:'absolute',inset:0,opacity:0,cursor:'pointer'}}/>
+            </label>
+            {preview&&<div data-testid="service-preview" style={{margin:'8px 0'}}><img src={preview} alt="prévia" style={{maxHeight:180,maxWidth:'100%',objectFit:'cover',border:'1px solid #ddd'}}/></div>}
+            <details style={{fontSize:11,color:'#666'}}><summary style={{cursor:'pointer'}}>Ou usar URL externa</summary>
+                <input type="text" placeholder="https://..." value={draft.image_url} onChange={e=>setDraft({...draft,image_url:e.target.value})} data-testid="service-image-input" style={{marginTop:8}}/>
+            </details>
+            {progress&&<p style={{fontSize:11,color:'#666'}} data-testid="service-progress">{progress}</p>}
             <button className="primary" disabled={saving} data-testid="add-services-button"><Plus size={16}/> {saving?'Salvando...':'Adicionar serviço'}</button>
         </form>
         {message&&<p className={message.includes('sucesso')||message==='Atualizado.'?'success-msg':'error'} data-testid="admin-message">{message}</p>}
@@ -173,7 +205,10 @@ function AdminServices({items,token,reload}){
             <div className="records-head"><h2>Serviços cadastrados <span>{items.length}</span></h2></div>
             {items.length===0?<p className="empty">Nenhum serviço cadastrado ainda.</p>:items.map(x=><div className="record" key={x.id} data-testid={`admin-record-${x.id}`}>
                 {editing===x.id?<EditForm item={x} fields={SERVICE_FIELDS} onSave={p=>save(x.id,p)} onCancel={()=>setEditing(null)}/>
-                :<div><b>{x.title||'Serviço'}</b><small>{x.description||''}</small>{x.category&&<small style={{color:'#999',display:'block',marginTop:4}}>Categoria: {x.category}</small>}</div>}
+                :<div style={{display:'flex',gap:12,alignItems:'center'}}>
+                    {x.image_url&&<img src={x.image_url.startsWith('/api/')?`${API}${x.image_url}`:x.image_url} alt={x.title||'imagem'} style={{width:70,height:70,objectFit:'cover',border:'1px solid #eee'}}/>}
+                    <div><b>{x.title||'Serviço'}</b><small>{x.description||''}</small>{x.category&&<small style={{color:'#999',display:'block',marginTop:4}}>Categoria: {x.category}</small>}</div>
+                </div>}
                 <div className="record-actions">
                     <span className={x.active===false?'':'good'}>{x.active===false?'Inativo':'Ativo'}</span>
                     {editing!==x.id&&<button onClick={()=>setEditing(x.id)} title="Editar" data-testid={`edit-${x.id}`}><Edit3 size={15}/></button>}

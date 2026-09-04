@@ -188,6 +188,18 @@ backend:
       - working: true
         agent: "testing"
         comment: "POST /api/quotes accepts form data (name, phone, vehicle, year, interest, message) and creates lead successfully (✓). Returns created lead with id (✓). Status 200."
+  
+  - task: "Upload feature for Services and Gallery tabs"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Comprehensive upload feature testing completed with 4 test suites (13 individual steps). TEST A - Upload Endpoint: Login (✓), Upload PNG with correct response format {id, url, content_type, size} (✓), Image retrieval via GET /api/files/{id} (✓). TEST B - Services with Upload: Service created with uploaded image_url (✓), Service appears in public endpoint with correct image_url (✓), No cross-contamination with gallery collection (✓), Service deletion (✓). TEST C - Gallery Upload Regression: Gallery upload still works (✓), Gallery item creation with uploaded image (✓), Gallery item in public endpoint (✓), Gallery item deletion (✓). TEST D - Settings Regression: GET /api/settings returns required fields (✓), PUT /api/settings round-trip preserves values (✓). Both Services and Gallery tabs can independently use the same /api/admin/upload endpoint without any cross-contamination. All 13 test steps passed."
 
 frontend:
   - task: "Frontend testing"
@@ -205,12 +217,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "All backend endpoints verified"
+    - "Upload feature for Services and Gallery tabs - COMPLETED"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -218,3 +230,5 @@ test_plan:
 agent_communication:
   - agent: "testing"
     message: "Surgical fix verification completed successfully. All 6 test categories passed (18 individual test cases). Health endpoint (✓), Admin login (✓), Services CRUD with full separation from gallery (✓), Gallery upload endpoint with proper validation and auth (✓), Settings endpoint with round-trip preservation (✓), Quote form submission (✓). No regressions detected. Services and Gallery collections are completely independent - no cross-contamination in either direction. The surgical fix was successful."
+  - agent: "testing"
+    message: "Upload feature testing for Services and Gallery tabs completed. Verified 4 test suites with 13 individual steps: TEST A - Upload endpoint works correctly (login, upload PNG, retrieve image). TEST B - Services tab can use uploaded images (create service with image_url, verify in public endpoint, no cross-contamination with gallery, delete service). TEST C - Gallery upload regression check passed (upload, create gallery item, verify in public, delete). TEST D - Settings regression check passed (GET and PUT round-trip). Both Services and Gallery tabs successfully use the same /api/admin/upload endpoint. No 500 errors, no cross-contamination, no auth failures detected. All tests passed."
