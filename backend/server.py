@@ -1,12 +1,11 @@
 from fastapi import FastAPI, APIRouter, UploadFile, File, Form, HTTPException, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional
 import os, uuid, hashlib, hmac, base64
 
 ROOT = Path(__file__).parent
@@ -21,24 +20,49 @@ ADMIN_EMAIL = os.environ['ADMIN_EMAIL']
 ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
 TOKEN_SECRET = os.environ['TOKEN_SECRET']
 COLLECTIONS = ['services','testimonials','gallery','faqs','leads','quotes']
+
+ASSET = 'https://customer-assets-rejwkqb3.emergentagent.net/job_dinho-rodas-bh/artifacts'
+IMG_FACADE   = f'{ASSET}/lz5sdjnm_image.png'
+IMG_WHEELS   = f'{ASSET}/rf6tvcsm_image.png'
+IMG_SERVICE  = f'{ASSET}/kxt79vke_image.png'
+IMG_PAINT    = f'{ASSET}/qeghb584_image.png'
+
 DEMO = {
  'services': [
-  {'title':'Rodas','description':'Encontre opções para diferentes estilos de veículos e projetos.','category':'Rodas','image_url':'https://images.unsplash.com/photo-1611838608826-4c32a6160d90?auto=format&fit=crop&w=900&q=80','active':True,'demo':True},
-  {'title':'Pneus','description':'Orientação para escolher a combinação adequada ao seu carro.','category':'Pneus','image_url':'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80','active':True,'demo':True},
-  {'title':'Serviços automotivos','description':'Atendimento especializado para cuidar do conjunto roda e pneu.','category':'Serviços automotivos','image_url':'https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=900&q=80','active':True,'demo':True},
+  {'title':'Rodas','description':'Encontre opções para diferentes estilos de veículos e projetos.','category':'Rodas','image_url':IMG_WHEELS,'active':True,'demo':True},
+  {'title':'Pintura das rodas','description':'Recuperação, pintura e personalização de rodas.','category':'Personalização','image_url':IMG_PAINT,'active':True,'demo':True,'crop':'top'},
+  {'title':'Serviços automotivos','description':'Atendimento especializado no conjunto roda e pneu.','category':'Serviços','image_url':IMG_SERVICE,'active':True,'demo':True,'crop':'bottom'},
  ],
  'testimonials': [],
  'gallery': [
-  {'title':'Detalhes que fazem diferença','category':'Rodas','description':'Imagem DEMO para apresentação inicial.','image_url':'https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=900&q=80','active':True,'demo':True},
-  {'title':'Cuidado em cada etapa','category':'Serviços','description':'Imagem DEMO para apresentação inicial.','image_url':'https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=900&q=80','active':True,'demo':True},
+  {'title':'Nossa loja','category':'Loja','description':'Fachada Dinho Rodas · Belo Horizonte.','image_url':IMG_FACADE,'active':True,'demo':True},
+  {'title':'Rodas personalizadas','category':'Rodas','description':'Trabalho de recuperação e pintura.','image_url':IMG_WHEELS,'active':True,'demo':True},
+  {'title':'Pintura das rodas','category':'Personalização','description':'Sprinter finalizada.','image_url':IMG_PAINT,'active':True,'demo':True,'crop':'top'},
+  {'title':'Atendimento presencial','category':'Serviços','description':'Equipe Dinho Rodas em ação.','image_url':IMG_SERVICE,'active':True,'demo':True,'crop':'bottom'},
  ],
  'faqs': [
-  {'question':'Como faço um orçamento?','answer':'Preencha o formulário nesta página ou fale diretamente com a equipe pelo WhatsApp.','order':1,'active':True,'demo':True},
-  {'question':'Posso enviar uma foto do meu carro?','answer':'Sim. Você pode anexar uma foto no formulário para ajudar na avaliação inicial.','order':2,'active':True,'demo':True},
-  {'question':'Vocês atendem sem agendamento?','answer':'Fale com a equipe para confirmar a melhor forma e horário de atendimento.','order':3,'active':True,'demo':True},
+  {'question':'Como faço um orçamento?','answer':'Preencha o formulário nesta página ou fale direto com a equipe pelo WhatsApp.','order':1,'active':True,'demo':True},
+  {'question':'Posso enviar uma foto do meu carro?','answer':'Sim. Você pode anexar fotos no formulário — ajuda muito na avaliação.','order':2,'active':True,'demo':True},
+  {'question':'Quais os horários de atendimento?','answer':'Segunda a sexta das 08h às 18h e sábado das 08h às 13h. Domingos e feriados: fechado.','order':3,'active':True,'demo':True},
+  {'question':'Como chegar até a loja?','answer':'Estamos na Rua João Caetano, 1013, Ambrosina, Belo Horizonte - MG. Use o botão "Como chegar" para abrir a rota.','order':4,'active':True,'demo':True},
  ]
 }
-SETTINGS = {'company_name':'Dinho Rodas','phone':'(31) 9931-0824','whatsapp':'553199310824','instagram':'instagram.com','address':'Av. Teresa Cristina, 5573 - Gameleira, Belo Horizonte - MG, 30550-390','hours':'Aberto · Fecha às 18:00','maps_url':'https://maps.google.com/?q=Av.+Teresa+Cristina,+5573,+Gameleira,+Belo+Horizonte+-+MG','meta_title':'Dinho Rodas | Rodas em Belo Horizonte','meta_description':'Dinho Rodas: loja e oficina especializada em rodas em Belo Horizonte, no bairro Gameleira. Solicite seu orçamento pelo WhatsApp.'}
+
+CANONICAL_SETTINGS = {
+    'company_name':'Dinho Rodas',
+    'phone':'(31) 99131-0824',
+    'whatsapp':'5531991310824',
+    'whatsapp_display':'+55 31 99131-0824',
+    'instagram':'https://instagram.com/dinho_rodas',
+    'address':'Rua João Caetano, 1013 - Ambrosina, Belo Horizonte - MG, 30421-090',
+    'address_short':'Rua João Caetano, 1013 · Ambrosina · BH',
+    'hours':'Seg a Sex 08h às 18h · Sábado 08h às 13h · Domingo e feriado fechado',
+    'hours_short':'Seg-Sex 08h-18h · Sáb 08h-13h',
+    'maps_url':'https://www.google.com/maps/search/?api=1&query=Rua+Jo%C3%A3o+Caetano+1013+Ambrosina+Belo+Horizonte',
+    'meta_title':'Dinho Rodas | Rodas em Belo Horizonte',
+    'meta_description':'Dinho Rodas: loja e oficina especializada em rodas em Belo Horizonte, no bairro Ambrosina. Solicite seu orçamento pelo WhatsApp.',
+    'settings_version': 2,
+}
 
 def now(): return datetime.now(timezone.utc).isoformat()
 def clean(doc):
@@ -48,11 +72,23 @@ def token_for(email):
     raw=f'{email}:{TOKEN_SECRET}'.encode(); return hashlib.sha256(raw).hexdigest()
 def require_auth(authorization: Optional[str]):
     if not authorization or not hmac.compare_digest(authorization.replace('Bearer ','').strip(), token_for(ADMIN_EMAIL)): raise HTTPException(401, 'Não autorizado')
+
 async def seed():
+    existing = await db.settings.find_one({'id':'main'}) or {}
+    version = existing.get('settings_version', 0)
+    migrating = version < CANONICAL_SETTINGS['settings_version']
     for name, rows in DEMO.items():
-        if await db[name].count_documents({}) == 0:
-            for row in rows: await db[name].insert_one({**row,'id':str(uuid.uuid4()),'created_at':now()})
-    if await db.settings.count_documents({}) == 0: await db.settings.insert_one({**SETTINGS,'id':'main'})
+        empty = await db[name].count_documents({}) == 0
+        if empty or migrating:
+            if migrating and not empty:
+                await db[name].delete_many({'demo': True})
+            for row in rows:
+                await db[name].insert_one({**row,'id':str(uuid.uuid4()),'created_at':now()})
+    if migrating:
+        preserved = {k: v for k, v in existing.items() if k not in ('_id',) and k not in CANONICAL_SETTINGS}
+        merged = {**CANONICAL_SETTINGS, **preserved, 'id':'main'}
+        await db.settings.update_one({'id':'main'},{'$set':merged}, upsert=True)
+
 @app.on_event('startup')
 async def startup(): await seed()
 
@@ -63,17 +99,22 @@ class Item(BaseModel): model_config={'extra':'allow'}
 async def public_data():
     out={}
     for name in ['services','testimonials','gallery','faqs']:
-        out[name]=[clean(x) for x in await db[name].find({'active':{'$ne':False}}).sort('order',1).to_list(100)]
+        cursor = db[name].find({'active':{'$ne':False}}).sort('order',1)
+        out[name]=[clean(x) for x in await cursor.to_list(200)]
     out['settings']=clean(await db.settings.find_one({'id':'main'}))
     return out
+
 @api.get('/health')
 async def health():
     await db.command('ping')
     return {'status':'ok','database':'connected'}
+
 @api.post('/auth/login')
 async def login(data: Login):
-    if not hmac.compare_digest(data.email,ADMIN_EMAIL) or not hmac.compare_digest(data.password,ADMIN_PASSWORD): raise HTTPException(401,'E-mail ou senha inválidos')
+    if not hmac.compare_digest(data.email,ADMIN_EMAIL) or not hmac.compare_digest(data.password,ADMIN_PASSWORD):
+        raise HTTPException(401,'E-mail ou senha inválidos')
     return {'token':token_for(data.email),'email':data.email}
+
 @api.post('/quotes')
 async def create_quote(name: str=Form(...), phone: str=Form(...), vehicle: str=Form(''), year: str=Form(''), interest: str=Form(''), message: str=Form(''), origin: str=Form('site-form'), photos: list[UploadFile]=File(default=[])):
     files=[]
@@ -86,38 +127,73 @@ async def create_quote(name: str=Form(...), phone: str=Form(...), vehicle: str=F
     lead={'id':str(uuid.uuid4()),'name':name,'phone':phone,'vehicle':vehicle,'year':year,'interest':interest,'message':message,'photos':files,'origin':origin,'status':'Novo','created_at':now()}
     await db.quotes.insert_one(lead); await db.leads.insert_one({**lead,'source':origin})
     return clean(lead)
+
 @api.get('/files/{file_id}')
 async def get_file(file_id:str):
     record=await db.files.find_one({'id':file_id})
     if not record: raise HTTPException(404,'Arquivo não encontrado')
     return Response(base64.b64decode(record['content']), media_type=record.get('content_type','image/jpeg'))
+
 @api.post('/leads/click')
 async def whatsapp_click(data: Item):
-    row={**data.model_dump(),'id':str(uuid.uuid4()),'status':'Novo','created_at':now()}; await db.leads.insert_one(row); return clean(row)
+    row={**data.model_dump(),'id':str(uuid.uuid4()),'status':'Novo','created_at':now()}
+    await db.leads.insert_one(row); return clean(row)
+
 @api.get('/dashboard/metrics')
 async def metrics(authorization: Optional[str]=Header(None)):
-    require_auth(authorization); return {'total_leads':await db.leads.count_documents({}),'total_quotes':await db.quotes.count_documents({}),'new_quotes':await db.quotes.count_documents({'status':'Novo'}),'converted':await db.leads.count_documents({'status':'Convertido'}),'services_count':await db.services.count_documents({'active':True}),'whatsapp_clicks':await db.leads.count_documents({'source':{'$regex':'WhatsApp'}})}
+    require_auth(authorization)
+    return {
+        'total_leads':await db.leads.count_documents({}),
+        'total_quotes':await db.quotes.count_documents({}),
+        'new_quotes':await db.quotes.count_documents({'status':'Novo'}),
+        'converted':await db.leads.count_documents({'status':'Convertido'}),
+        'services_count':await db.services.count_documents({'active':True}),
+        'whatsapp_clicks':await db.leads.count_documents({'source':{'$regex':'WhatsApp'}}),
+    }
+
 @api.get('/admin/{collection}')
 async def list_items(collection:str, authorization:Optional[str]=Header(None)):
-    require_auth(authorization); name='quotes' if collection=='quotes' else collection
-    if name not in COLLECTIONS: raise HTTPException(404,'Coleção inválida')
-    return [clean(x) for x in await db[name].find({}).sort('created_at',-1).to_list(1000)]
+    require_auth(authorization)
+    if collection not in COLLECTIONS: raise HTTPException(404,'Coleção inválida')
+    return [clean(x) for x in await db[collection].find({}).sort('created_at',-1).to_list(1000)]
+
 @api.post('/admin/{collection}')
 async def add_item(collection:str, data:Item, authorization:Optional[str]=Header(None)):
     require_auth(authorization)
     if collection not in COLLECTIONS: raise HTTPException(404,'Coleção inválida')
-    row={**data.model_dump(),'id':str(uuid.uuid4()),'created_at':now()}; await db[collection].insert_one(row); return clean(row)
+    row={**data.model_dump(),'id':str(uuid.uuid4()),'created_at':now()}
+    await db[collection].insert_one(row); return clean(row)
+
 @api.put('/admin/{collection}/{item_id}')
 async def update_item(collection:str,item_id:str,data:Item,authorization:Optional[str]=Header(None)):
-    require_auth(authorization); payload=data.model_dump(); payload.pop('id',None); await db[collection].update_one({'id':item_id},{'$set':payload}); return clean(await db[collection].find_one({'id':item_id}))
+    require_auth(authorization)
+    if collection not in COLLECTIONS: raise HTTPException(404,'Coleção inválida')
+    payload=data.model_dump(); payload.pop('id',None); payload.pop('_id',None)
+    await db[collection].update_one({'id':item_id},{'$set':payload})
+    return clean(await db[collection].find_one({'id':item_id}))
+
 @api.delete('/admin/{collection}/{item_id}')
 async def delete_item(collection:str,item_id:str,authorization:Optional[str]=Header(None)):
-    require_auth(authorization); await db[collection].delete_one({'id':item_id}); return {'ok':True}
+    require_auth(authorization)
+    if collection not in COLLECTIONS: raise HTTPException(404,'Coleção inválida')
+    await db[collection].delete_one({'id':item_id}); return {'ok':True}
+
 @api.get('/settings')
-async def get_settings(): return clean(await db.settings.find_one({'id':'main'}))
+async def get_settings():
+    doc = await db.settings.find_one({'id':'main'})
+    if not doc:
+        await db.settings.insert_one({**CANONICAL_SETTINGS,'id':'main'})
+        doc = await db.settings.find_one({'id':'main'})
+    return clean(doc)
+
 @api.put('/settings')
 async def update_settings(data:Item,authorization:Optional[str]=Header(None)):
-    require_auth(authorization); payload=data.model_dump(); payload.pop('_id',None); await db.settings.update_one({'id':'main'},{'$set':payload},upsert=True); return clean(await db.settings.find_one({'id':'main'}))
+    require_auth(authorization)
+    payload=data.model_dump(); payload.pop('_id',None); payload.pop('id',None)
+    await db.settings.update_one({'id':'main'},{'$set':payload},upsert=True)
+    return clean(await db.settings.find_one({'id':'main'}))
+
 app.include_router(api)
+
 @app.on_event('shutdown')
 async def shutdown(): mongo.close()

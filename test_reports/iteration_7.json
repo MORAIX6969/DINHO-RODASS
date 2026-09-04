@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration 7 full-stack audit (backend + frontend) of the Dinho Rodas admin panel and public site. Backend: new pytest suite /app/backend/tests/test_settings_content.py (settings canonical values + auth guard + persistence/public propagation, CRUD+public reflection for faqs/services/gallery/testimonials, inactive-item hiding, quote multipart with photo -> admin visibility + byte-exact /api/files, 422 validation, non-ASCII login). Combined run of both suites: 21/22 passed (1 real backend bug). Frontend: public site renders 3 services / 4 gallery / 4 faqs with zero broken images, status pill = 'Aberto agora' (correct: Thu 17:53 America/Sao_Paulo), phone (31) 99131-0824, address Rua João Caetano 1013 Ambrosina, maps href correct. Admin login validations (HTML5 required, wrong creds -> 'E-mail ou senha inválidos', correct creds -> dashboard) all pass. Full FAQ CRUD and Services CRUD verified end-to-end in UI including public-site reflection. Quote form with photo submits, appears in admin with name/phone/vehicle/year/interest/message/photo thumbnail and wa.me quick-link built from the customer phone. TWO REAL BUGS FOUND: (1) CRITICAL - Settings save silently discards edits due to a StrictMode double-fetch race, showing a false success message; (2) browser Back after pushState does not restore the public view (no popstate listener). Also: SEO settings (meta_title/meta_description) are never applied to the document (public <title> stays 'Emergent | Fullstack App'), and /api/auth/login 500s on a non-ASCII email.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/login", "issue": "Non-ASCII email (e.g. 'usuário@exemplo.com') raises TypeError: comparing strings with non-ASCII characters is not supported from hmac.compare_digest -> HTTP 500 instead of 401. Compare encoded bytes (email.encode()/ADMIN_EMAIL.encode()) or normalize before compare.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "startup/shutdown", "issue": "Still uses deprecated @app.on_event; migrate to lifespan handler (carried over from earlier iterations)."},
+      {"endpoint": "DELETE/PUT /api/admin/{collection}/{id}", "issue": "Returns 200/{'ok':true} even when the id does not exist (no 404); PUT on a missing id returns null body."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminSettings", "issue": "CRITICAL race: index.js wraps App in React.StrictMode, so AdminSettings' load effect fires GET /api/settings twice. If the user edits a field before the 2nd (late) response resolves, its .then(setSettings) overwrites local state; the subsequent PUT sends the ORIGINAL values yet the UI still shows 'Configurações salvas com sucesso.'. Reproduced: fill setting-meta_title immediately -> save -> GET shows unchanged value; waiting 4s before editing -> save persists. Fix with an ignore/AbortController guard (or load once via ref / react-query) and do not clobber a dirty form.", "selector": "[data-testid=\"setting-meta_title\"], [data-testid=\"settings-save\"], [data-testid=\"settings-message\"]", "priority": "CRITICAL"},
+      {"component": "App router", "issue": "No window.onpopstate listener: after clicking admin-access-button (pushState to /admin), the browser Back button changes the URL to '/' but the Admin view stays mounted (public site never returns). Add a popstate handler that syncs route with window.location.pathname.", "selector": "[data-testid=\"admin-access-button\"]", "priority": "HIGH"},
+      {"component": "AdminList / EditForm number inputs", "issue": "onChange uses parseInt(e.target.value||'0') so clearing 'Ordem'/'Nota' immediately forces 0 and the field cannot be emptied.", "selector": ".add-form input[placeholder=\"Ordem\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "SEO settings -> public site", "issue": "meta_title/meta_description are editable and persisted but never applied: public document.title remains 'Emergent | Fullstack App' and no meta description tag is updated. Set document.title / meta[name=description] from settings in Public.", "affected_selectors": ["[data-testid=\"setting-meta_title\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Admin quotes list", "issues": ["Record shows an 'Interesse:' label on its own line with the value wrapping to the next line, which reads as an empty label; keep label+value inline."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_settings_content.py",
+    "/app/backend/tests/test_dinho_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix AdminSettings StrictMode double-fetch race so admin edits are not silently discarded (and never show a success message when the payload was reverted).",
+    "Add a popstate listener in App so the browser Back button returns from /admin to the public site.",
+    "Encode strings before hmac.compare_digest in /api/auth/login so non-ASCII emails return 401 instead of 500.",
+    "Apply meta_title/meta_description from /api/settings to document.title and the description meta tag on the public site.",
+    "Optional: return 404 from admin PUT/DELETE when the record id does not exist; allow clearing numeric fields (Ordem/Nota)."
+  ],
+  "critical_code_review_comments": [
+    "AdminSettings/Public/AdminList fetches have no cancellation guard; under StrictMode (and on rapid tab switching) a late response can overwrite fresher local state - the settings bug is the concrete symptom.",
+    "AdminSettings PUTs the whole settings document including settings_version, so a stale form can silently rewrite server-side canonical fields; prefer sending only the editable SETTINGS_FIELDS keys.",
+    "EditForm action buttons lack type=\"button\"; they are safe today only because records render outside a <form>, but any future wrapping form will submit unexpectedly.",
+    "seed() deletes all {demo:True} docs on version bump - any admin edit of a demo item keeps demo:True and will be wiped by the next migration; strip the demo flag on update in PUT /api/admin/{collection}."
+  ],
+  "updated_files": ["/app/backend/tests/test_settings_content.py"],
+  "success_rate": {"backend": "95% (21/22 pytest)", "frontend": "85% (all CRUD + login + quote flows pass; settings save race and Back-button routing fail)"},
+  "seed_data_creation": "All test artifacts removed: TEST_ faqs/services/gallery/testimonials deleted, TEST_/Visitante quotes+leads purged (19 leads + 12 quotes), settings restored to canonical (phone (31) 99131-0824, meta_title 'Dinho Rodas | Rodas em Belo Horizonte', settings_version 2). Public payload back to 3 services / 4 gallery / 4 faqs / 0 testimonials.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@dinhorodas.com / Dinho#2026 (from /app/memory/test_credentials.md) - valid, login returns 200 + token",
+  "context_for_next_testing_agent": "Backend suites: test_dinho_api.py (11 tests) + test_settings_content.py (11 tests). Run `python -m pytest /app/backend/tests/ -v` (pytest.ini forces -n 2 --dist loadscope). Known artifacts when writing UI tests: (a) FAQ answers live inside a collapsed <details>, so inner_text() omits the answer until summary is clicked - click it before asserting; (b) uploading a 1x1 stub PNG makes naturalWidth 0 in the admin thumbnail check, use a real image. To reproduce the settings bug: open Configurações, edit setting-meta_title within ~1-2s of the form appearing, save, then GET /api/settings - value is unchanged despite the success toast. Waiting ~4s before editing makes it pass.",
+  "rca_of_the_issue": "Settings bug: index.js renders <App/> inside React.StrictMode, which double-invokes AdminSettings' useEffect(load,[load]); both GET /api/settings promises call setSettings unconditionally. The second response lands after the user has typed, replacing the edited state object with the server copy, so handleSave PUTs the original values while r.ok still yields 'Configurações salvas com sucesso.' - a silent data-loss + false-positive UX. Fix: add a cancelled/ignore flag (or AbortController) in the effect cleanup, or skip setSettings when the form is dirty. Routing bug: App keeps route in useState initialized from window.location.pathname and only updates it on in-app clicks; no popstate subscription, so history navigation desyncs URL from the rendered view. Login 500: hmac.compare_digest rejects str arguments containing non-ASCII code points."
+}
