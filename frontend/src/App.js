@@ -75,8 +75,9 @@ function Admin({onExit}){
     const tabs=[['dashboard','Visão geral',LayoutDashboard],['quotes','Orçamentos',MessageCircle],['leads','Leads',Users],['services','Serviços',SettingsIcon],['testimonials','Depoimentos',Star],['gallery','Galeria',Images],['faqs','FAQ',HelpCircle],['settings','Configurações',SettingsIcon]];
     const load=useCallback(()=>{
         if(!token||!API)return;
-        fetch(`${API}/api/dashboard/metrics`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.ok?r.json():{}).then(setMetrics).catch(()=>{});
-        if(tab!=='dashboard'&&tab!=='settings')fetch(`${API}/api/admin/${tab}`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.ok?r.json():[]).then(d=>setItems(Array.isArray(d)?d:[])).catch(()=>setItems([]));
+        const check401=r=>{if(r.status===401){localStorage.removeItem('dinho_token');setToken(null);return null;}return r;};
+        fetch(`${API}/api/dashboard/metrics`,{headers:{Authorization:`Bearer ${token}`}}).then(check401).then(r=>r&&r.ok?r.json():{}).then(setMetrics).catch(()=>{});
+        if(tab!=='dashboard'&&tab!=='settings')fetch(`${API}/api/admin/${tab}`,{headers:{Authorization:`Bearer ${token}`}}).then(check401).then(r=>r&&r.ok?r.json():[]).then(d=>setItems(Array.isArray(d)?d:[])).catch(()=>setItems([]));
     },[token,tab]);
     useEffect(load,[load]);
     const doLogin=async e=>{e.preventDefault();setError('');if(!API){setError('URL da API não configurada.');return;}try{const r=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(login)});const text=await r.text();let d;try{d=JSON.parse(text)}catch{setError('Resposta inválida do servidor. Verifique o backend.');return;}if(r.ok){localStorage.setItem('dinho_token',d.token);setToken(d.token)}else setError(d.detail||'Falha ao entrar')}catch{setError('Sem conexão com o backend.')}};

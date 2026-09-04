@@ -215,4 +215,6 @@ agent_communication:
     message: "Frontend audit for GitHub+Netlify deployment. Backend seed switched from Emergent CDN URLs to '/assets/*.png' (served by Netlify static). Added 5th gallery item, renamed 1st. Bumped settings_version 2->3 to force seed re-run so previously seeded records are refreshed. Please test the 5 focus tasks. Do NOT test frontend UI."
   - agent: "testing"
     message: "✅ ALL BACKEND TESTS PASSED (25/25). Seed verification: services=3, gallery=5 (all with /assets/ paths, all required titles present), faqs=4, NO Emergent CDN URLs. All CRUD operations (Services, Gallery, Testimonials) working correctly. Settings endpoint: all fields present, settings_version=3 confirmed, round-trip preserves values. Upload functionality working. Auth working. NO REGRESSIONS detected. Backend is production-ready."
+  - agent: "testing"
+    message: "✅ SMOKE TEST PASSED (6/6) after frontend 401 handler change. Health check OK. Admin login working. Testimonials CRUD (GET/POST/DELETE) working with valid token. Unauthenticated access correctly returns 401. CRITICAL: Bad/expired token correctly returns 401 (frontend auto-logout will work). Settings endpoint working. NO BACKEND REGRESSIONS from frontend-only change."
 
