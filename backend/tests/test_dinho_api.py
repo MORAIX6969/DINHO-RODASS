@@ -2,7 +2,7 @@ import os
 import requests
 import pytest
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://dinho-rodas-bh.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://github-importer-58.preview.emergentagent.com").rstrip("/")
 
 def test_public_and_quote_flow():
     public = requests.get(f"{BASE_URL}/api/public", timeout=20)
