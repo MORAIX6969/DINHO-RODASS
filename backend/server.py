@@ -21,11 +21,12 @@ ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
 TOKEN_SECRET = os.environ['TOKEN_SECRET']
 COLLECTIONS = ['services','testimonials','gallery','faqs','leads','quotes']
 
-ASSET = 'https://customer-assets-rejwkqb3.emergentagent.net/job_dinho-rodas-bh/artifacts'
-IMG_FACADE   = f'{ASSET}/lz5sdjnm_image.png'
-IMG_WHEELS   = f'{ASSET}/rf6tvcsm_image.png'
-IMG_SERVICE  = f'{ASSET}/kxt79vke_image.png'
-IMG_PAINT    = f'{ASSET}/qeghb584_image.png'
+ASSET = '/assets'
+IMG_FACADE   = f'{ASSET}/fachada-gol.png'
+IMG_WHEELS   = f'{ASSET}/photo-cta.png'
+IMG_SERVICE  = f'{ASSET}/atendimento-presencial.png'
+IMG_PAINT    = f'{ASSET}/pintura-rodas-sprinter.png'
+IMG_WHEEL_VW = f'{ASSET}/roda-vw-premium.png'
 
 DEMO = {
  'services': [
@@ -35,10 +36,11 @@ DEMO = {
  ],
  'testimonials': [],
  'gallery': [
-  {'title':'Nossa loja','category':'Loja','description':'Fachada Dinho Rodas · Belo Horizonte.','image_url':IMG_FACADE,'active':True,'demo':True},
+  {'title':'Fachada Dinho Rodas','category':'Loja','description':'Nossa loja em Belo Horizonte.','image_url':IMG_FACADE,'active':True,'demo':True},
   {'title':'Rodas personalizadas','category':'Rodas','description':'Trabalho de recuperação e pintura.','image_url':IMG_WHEELS,'active':True,'demo':True},
   {'title':'Pintura das rodas','category':'Personalização','description':'Sprinter finalizada.','image_url':IMG_PAINT,'active':True,'demo':True,'crop':'top'},
   {'title':'Atendimento presencial','category':'Serviços','description':'Equipe Dinho Rodas em ação.','image_url':IMG_SERVICE,'active':True,'demo':True,'crop':'bottom'},
+  {'title':'Roda VW premium','category':'Rodas','description':'Detalhe de roda VW disponível na loja.','image_url':IMG_WHEEL_VW,'active':True,'demo':True},
  ],
  'faqs': [
   {'question':'Como faço um orçamento?','answer':'Preencha o formulário nesta página ou fale direto com a equipe pelo WhatsApp.','order':1,'active':True,'demo':True},
@@ -61,7 +63,7 @@ CANONICAL_SETTINGS = {
     'maps_url':'https://www.google.com/maps/search/?api=1&query=Rua+Jo%C3%A3o+Caetano+1013+Ambrosina+Belo+Horizonte',
     'meta_title':'Dinho Rodas | Rodas em Belo Horizonte',
     'meta_description':'Dinho Rodas: loja e oficina especializada em rodas em Belo Horizonte, no bairro Ambrosina. Solicite seu orçamento pelo WhatsApp.',
-    'settings_version': 2,
+    'settings_version': 3,
 }
 
 def now(): return datetime.now(timezone.utc).isoformat()

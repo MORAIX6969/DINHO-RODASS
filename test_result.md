@@ -102,22 +102,10 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Add 2 new photos (VW wheel + Silver Gol at storefront) with Instagram element removal + light quality improvement, plus create a public Testimonials section that reads from the existing admin Depoimentos tab. Do NOT break Settings, Services, Gallery or any existing functionality."
+user_problem_statement: "Frontend audit + prepare for GitHub/Netlify deploy: ensure all images live in the repo (not in Emergent's temporary CDN or MongoDB), backend seed reflects final visual state, and production build compiles clean. Do NOT break any existing feature."
 
 backend:
-  - task: "Health endpoint"
-    implemented: true
-    working: true
-    file: "backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "GET /api/health returns {status: ok, database: connected} correctly."
-  
-  - task: "Public testimonials array"
+  - task: "Seed with local /assets paths + 5 gallery items + bumped version"
     implemented: true
     working: true
     file: "backend/server.py"
@@ -127,10 +115,10 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "GET /api/public already returns a testimonials array (existing endpoint, no code changes for this). Please verify: (1) with 0 testimonials, endpoint still returns an array (empty or missing). (2) After POST /api/admin/testimonials with valid data (author, content, rating), the created testimonial appears in the public testimonials array of GET /api/public with the same values. (3) After DELETE, it disappears from public. Do NOT break existing behavior."
+        comment: "Changed ASSET base from Emergent CDN to '/assets' (served statically by Netlify). All demo services/gallery items now reference local paths (/assets/*.png). Added 'Roda VW premium' as 5th gallery demo item and renamed 'Nossa loja' -> 'Fachada Dinho Rodas' (image=fachada-gol.png). Bumped settings_version from 2 to 3 so seed migration re-runs. Verify: GET /api/public returns services=3 with image_url starting with '/assets/', gallery=5 all with '/assets/' image_url, faqs=4. Also verify Settings, Services CRUD, Gallery CRUD, Upload, Auth still all working (regression)."
       - working: true
         agent: "testing"
-        comment: "✅ ALL TESTS PASSED. (1) GET /api/public returns testimonials array (initially empty). (2) POST /api/admin/testimonials with {author:'Cliente Teste', content:'Atendimento excepcional na Dinho Rodas!', rating:5, active:true} created testimonial successfully (ID: 72e375f0-d257-4367-8539-1589a6d63253). (3) Created testimonial appears in public array with exact matching author, content, and rating values. (4) DELETE /api/admin/testimonials/{id} successful. (5) Deleted testimonial no longer appears in public array. Full CRUD cycle verified."
+        comment: "✅ VERIFIED: GET /api/public returns correct seed data. Services: exactly 3 items, all image_url start with '/assets/'. Gallery: exactly 5 items, all image_url start with '/assets/', all required titles present ('Fachada Dinho Rodas', 'Rodas personalizadas', 'Pintura das rodas', 'Atendimento presencial', 'Roda VW premium'). FAQs: exactly 4 items. NO Emergent CDN URLs found (customer-assets-rejwkqb3 or customer-assets-v7afamib). Seed migration successful."
   
   - task: "Services CRUD + upload (regression)"
     implemented: true
@@ -142,10 +130,10 @@ backend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Previously verified full CRUD + upload compatibility. Please re-verify with a single quick round trip after this change: upload PNG -> create service using that image_url -> GET /api/public shows the service -> DELETE."
+        comment: "Previously verified. Please re-verify: upload PNG -> create service -> GET /api/public shows it -> DELETE."
       - working: true
         agent: "testing"
-        comment: "✅ REGRESSION TEST PASSED. (1) POST /api/admin/upload successful (image URL: /api/files/ed958dcc-4f7a-431a-9180-9c5059c40336). (2) POST /api/admin/services with {title:'Reg Test', description:'desc', image_url:<uploaded>, active:true} created service successfully (ID: d7dca4f8-dd7e-4814-98dc-aa2f9a230b64). (3) GET /api/public shows service with correct image_url. (4) DELETE /api/admin/services successful. NO REGRESSION DETECTED."
+        comment: "✅ VERIFIED: Services CRUD + upload working correctly. POST /api/admin/upload returns valid URL. POST /api/admin/services creates service. GET /api/public shows created service with correct image_url. DELETE /api/admin/services removes service. No regression detected."
   
   - task: "Gallery CRUD + upload (regression)"
     implemented: true
@@ -157,10 +145,10 @@ backend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Previously verified. Please re-verify a quick round trip: upload PNG -> create gallery item -> GET /api/public shows it -> DELETE. Also confirm the 2 items 'Fachada Dinho Rodas' and 'Roda VW premium' currently exist in /api/admin/gallery (they were added by the main agent for the new photos)."
+        comment: "Previously verified. Please re-verify a quick round trip: upload PNG -> create gallery item -> GET /api/public shows it -> DELETE."
       - working: true
         agent: "testing"
-        comment: "✅ REGRESSION TEST PASSED. (1) GET /api/admin/gallery confirmed 2 seeded items exist: 'Fachada Dinho Rodas' and 'Roda VW premium' (found 6 total gallery items). (2) POST /api/admin/upload successful (image URL: /api/files/c7655459-367f-46a7-8da4-0f89eaf0c1ce). (3) POST /api/admin/gallery with {title:'Reg Test Photo', image_url:<uploaded>, active:true} created gallery item successfully (ID: aa84f3c6-4dfa-4702-b3d5-ffdf9a21946a). (4) GET /api/public shows created gallery item. (5) DELETE /api/admin/gallery successful. NO REGRESSION DETECTED."
+        comment: "✅ VERIFIED: Gallery CRUD + upload working correctly. GET /api/admin/gallery returns all 5 seeded items including 'Fachada Dinho Rodas' and 'Roda VW premium'. POST /api/admin/upload returns valid URL. POST /api/admin/gallery creates item. GET /api/public shows created item. DELETE /api/admin/gallery removes item. No regression detected."
   
   - task: "Settings endpoint (regression - MUST NOT break)"
     implemented: true
@@ -172,42 +160,59 @@ backend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Previously verified. Please re-verify: GET /api/settings returns full object; PUT round-trip with the same body preserves values. Any regression here is a critical bug."
+        comment: "Previously verified. Please re-verify: GET /api/settings returns full object; PUT round-trip with the same body preserves values. Critical: ensure settings_version bump did not wipe user settings."
       - working: true
         agent: "testing"
-        comment: "✅ CRITICAL REGRESSION TEST PASSED. (1) GET /api/settings returns all required fields: company_name='Dinho Rodas', phone='(31) 99131-0824', whatsapp='5531991310824', address, hours. (2) PUT /api/settings with same body preserves all values correctly. NO REGRESSION DETECTED. Settings endpoint fully functional."
+        comment: "✅ VERIFIED: Settings endpoint working correctly. GET /api/settings returns all required fields (company_name='Dinho Rodas', phone, whatsapp, address, hours, maps_url, instagram). settings_version=3 confirmed. PUT /api/settings round-trip preserves all values. No data loss or regression detected."
+  
+  - task: "Testimonials public array (regression)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Previously verified. Please quick-check: POST /api/admin/testimonials -> appears in GET /api/public testimonials -> DELETE -> disappears."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Testimonials public array working correctly. GET /api/public returns testimonials array. POST /api/admin/testimonials creates testimonial. GET /api/public shows created testimonial with correct data. DELETE /api/admin/testimonials removes testimonial. GET /api/public confirms deletion. No regression detected."
 
 frontend:
-  - task: "Frontend testing (deferred to user request)"
+  - task: "Frontend production build + local assets"
     implemented: true
     working: "NA"
-    file: "frontend/src/App.js"
+    file: "frontend/src/App.css, frontend/src/assets/, frontend/public/assets/"
     stuck_count: 0
     priority: "medium"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Frontend changes: new photos inserted in gallery via DB seed, testimonials section added (id=testimonials) rendering only when list non-empty. Ask user before running frontend tests."
+        comment: "Moved hero.png and photo-cta.png to frontend/src/assets/ (referenced by App.css with relative url()). Copied all 6 photos to frontend/public/assets/ so they are served statically by Netlify at /assets/*.png (referenced by backend seed and gallery data). Production build (yarn build) passes. Assets included in build/assets/ and build/static/media/. Not testing frontend UI unless user asks."
 
 metadata:
   created_by: "main_agent"
-  version: "1.2"
-  test_sequence: 4
+  version: "1.4"
+  test_sequence: 5
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Public testimonials array"
+    - "Seed with local /assets paths + 5 gallery items + bumped version"
     - "Settings endpoint (regression - MUST NOT break)"
     - "Services CRUD + upload (regression)"
     - "Gallery CRUD + upload (regression)"
+    - "Testimonials public array (regression)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "New iteration: added 2 new photos to gallery collection (Fachada Dinho Rodas + Roda VW premium) with Instagram elements removed via Gemini Nano Banana; added public Testimonials section (id=testimonials) which pulls from data.testimonials from GET /api/public and only renders when non-empty. Backend has NO code changes on public endpoint - testimonials array was already returned. Please verify the 4 focus tasks above. Do NOT test frontend UI, only backend endpoints. Admin credentials in /app/memory/test_credentials.md."
+    message: "Frontend audit for GitHub+Netlify deployment. Backend seed switched from Emergent CDN URLs to '/assets/*.png' (served by Netlify static). Added 5th gallery item, renamed 1st. Bumped settings_version 2->3 to force seed re-run so previously seeded records are refreshed. Please test the 5 focus tasks. Do NOT test frontend UI."
   - agent: "testing"
-    message: "✅ ALL 4 FOCUS TASKS PASSED (17/17 tests). (1) Public testimonials array: Full CRUD cycle verified - testimonials array exists, POST creates testimonial visible in public array with correct data, DELETE removes it. (2) Services CRUD + upload: NO REGRESSION - upload, create, public visibility, and delete all working. (3) Gallery CRUD + upload: NO REGRESSION - confirmed 2 seeded items exist (Fachada Dinho Rodas + Roda VW premium), upload/create/delete cycle working. (4) Settings endpoint: NO REGRESSION - all required fields present, PUT preserves values. Backend is fully functional with no breaking changes."
+    message: "✅ ALL BACKEND TESTS PASSED (25/25). Seed verification: services=3, gallery=5 (all with /assets/ paths, all required titles present), faqs=4, NO Emergent CDN URLs. All CRUD operations (Services, Gallery, Testimonials) working correctly. Settings endpoint: all fields present, settings_version=3 confirmed, round-trip preserves values. Upload functionality working. Auth working. NO REGRESSIONS detected. Backend is production-ready."
+

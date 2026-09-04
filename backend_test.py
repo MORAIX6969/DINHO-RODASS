@@ -53,9 +53,123 @@ def get_auth_token():
         log_fail("Admin login", str(e))
         return None
 
+def test_seed_verification():
+    """
+    Test 1: SEED VERIFICATION (CRITICAL)
+    - GET /api/public
+    - services: exactly 3 items, all image_url start with '/assets/'
+    - gallery: exactly 5 items, all image_url start with '/assets/'
+    - gallery titles: 'Fachada Dinho Rodas', 'Rodas personalizadas', 'Pintura das rodas', 'Atendimento presencial', 'Roda VW premium'
+    - faqs: exactly 4 items
+    - NO Emergent CDN URLs (customer-assets-rejwkqb3.emergentagent.net or customer-assets-v7afamib.emergentagent.net)
+    """
+    print("\n" + "="*80)
+    print("TEST 1: SEED VERIFICATION (CRITICAL)")
+    print("="*80)
+    
+    try:
+        response = requests.get(f"{BASE_URL}/public", timeout=10)
+        if response.status_code != 200:
+            log_fail("GET /api/public", f"Status {response.status_code}: {response.text}")
+            return
+        
+        data = response.json()
+        
+        # Verify services
+        services = data.get("services", [])
+        if len(services) != 3:
+            log_fail("Seed - services count", f"Expected exactly 3 services, got {len(services)}")
+        else:
+            log_pass("Seed - services count (3)")
+        
+        # Verify all services have /assets/ image_url
+        for i, service in enumerate(services):
+            image_url = service.get("image_url", "")
+            if not image_url.startswith("/assets/"):
+                log_fail(f"Seed - service[{i}] image_url", f"Expected '/assets/*', got '{image_url}'")
+            else:
+                print(f"   ✓ Service '{service.get('title')}': {image_url}")
+        
+        if all(s.get("image_url", "").startswith("/assets/") for s in services):
+            log_pass("Seed - all services use /assets/ paths")
+        
+        # Verify gallery
+        gallery = data.get("gallery", [])
+        if len(gallery) != 5:
+            log_fail("Seed - gallery count", f"Expected exactly 5 gallery items, got {len(gallery)}")
+        else:
+            log_pass("Seed - gallery count (5)")
+        
+        # Verify all gallery items have /assets/ image_url
+        for i, item in enumerate(gallery):
+            image_url = item.get("image_url", "")
+            if not image_url.startswith("/assets/"):
+                log_fail(f"Seed - gallery[{i}] image_url", f"Expected '/assets/*', got '{image_url}'")
+            else:
+                print(f"   ✓ Gallery '{item.get('title')}': {image_url}")
+        
+        if all(g.get("image_url", "").startswith("/assets/") for g in gallery):
+            log_pass("Seed - all gallery items use /assets/ paths")
+        
+        # Verify required gallery titles
+        required_titles = [
+            'Fachada Dinho Rodas',
+            'Rodas personalizadas',
+            'Pintura das rodas',
+            'Atendimento presencial',
+            'Roda VW premium'
+        ]
+        gallery_titles = [g.get("title") for g in gallery]
+        
+        missing_titles = []
+        for title in required_titles:
+            if title not in gallery_titles:
+                missing_titles.append(title)
+        
+        if missing_titles:
+            log_fail("Seed - gallery titles", f"Missing titles: {', '.join(missing_titles)}")
+        else:
+            log_pass("Seed - all 5 required gallery titles present")
+            for title in required_titles:
+                print(f"   ✓ {title}")
+        
+        # Verify faqs
+        faqs = data.get("faqs", [])
+        if len(faqs) != 4:
+            log_fail("Seed - faqs count", f"Expected exactly 4 faqs, got {len(faqs)}")
+        else:
+            log_pass("Seed - faqs count (4)")
+        
+        # Check for Emergent CDN URLs (MUST NOT EXIST)
+        emergent_cdn_patterns = [
+            "customer-assets-rejwkqb3.emergentagent.net",
+            "customer-assets-v7afamib.emergentagent.net"
+        ]
+        
+        cdn_found = []
+        for service in services:
+            image_url = service.get("image_url", "")
+            for pattern in emergent_cdn_patterns:
+                if pattern in image_url:
+                    cdn_found.append(f"Service '{service.get('title')}': {image_url}")
+        
+        for item in gallery:
+            image_url = item.get("image_url", "")
+            for pattern in emergent_cdn_patterns:
+                if pattern in image_url:
+                    cdn_found.append(f"Gallery '{item.get('title')}': {image_url}")
+        
+        if cdn_found:
+            log_fail("Seed - NO Emergent CDN URLs", f"Found Emergent CDN URLs:\n   " + "\n   ".join(cdn_found))
+        else:
+            log_pass("Seed - NO Emergent CDN URLs found")
+        
+    except Exception as e:
+        log_fail("GET /api/public (seed verification)", str(e))
+
 def test_public_testimonials_array(token):
     """
-    Test 1: Public testimonials array
+    Test 2: Public testimonials array
     - GET /api/public must contain testimonials key (array)
     - POST testimonial with valid data
     - Verify it appears in public array
@@ -63,7 +177,7 @@ def test_public_testimonials_array(token):
     - Verify it disappears from public array
     """
     print("\n" + "="*80)
-    print("TEST 1: PUBLIC TESTIMONIALS ARRAY")
+    print("TEST 2: PUBLIC TESTIMONIALS ARRAY")
     print("="*80)
     
     # Step 1a: GET /api/public - verify testimonials key exists
@@ -205,14 +319,14 @@ def test_public_testimonials_array(token):
 
 def test_services_crud_upload(token):
     """
-    Test 2: Services CRUD + upload (regression)
+    Test 3: Services CRUD + upload (regression)
     - Upload PNG
     - Create service with image_url
     - GET /api/public shows service
     - DELETE service
     """
     print("\n" + "="*80)
-    print("TEST 2: SERVICES CRUD + UPLOAD (REGRESSION)")
+    print("TEST 3: SERVICES CRUD + UPLOAD (REGRESSION)")
     print("="*80)
     
     # Step 2a: Upload PNG
@@ -330,7 +444,7 @@ def test_services_crud_upload(token):
 
 def test_gallery_crud_upload(token):
     """
-    Test 3: Gallery CRUD + upload (regression)
+    Test 4: Gallery CRUD + upload (regression)
     - Verify 2 items exist: "Fachada Dinho Rodas" and "Roda VW premium"
     - Upload PNG
     - Create gallery item
@@ -338,7 +452,7 @@ def test_gallery_crud_upload(token):
     - DELETE it
     """
     print("\n" + "="*80)
-    print("TEST 3: GALLERY CRUD + UPLOAD (REGRESSION)")
+    print("TEST 4: GALLERY CRUD + UPLOAD (REGRESSION)")
     print("="*80)
     
     # Step 3a: Verify seeded items exist
@@ -482,15 +596,15 @@ def test_gallery_crud_upload(token):
 
 def test_settings_regression(token):
     """
-    Test 4: Settings endpoint (regression - MUST NOT BREAK)
-    - GET /api/settings returns full object
+    Test 5: Settings endpoint (regression - MUST NOT BREAK)
+    - GET /api/settings returns full object with settings_version=3
     - PUT /api/settings with same body preserves values
     """
     print("\n" + "="*80)
-    print("TEST 4: SETTINGS ENDPOINT (REGRESSION - CRITICAL)")
+    print("TEST 5: SETTINGS ENDPOINT (REGRESSION - CRITICAL)")
     print("="*80)
     
-    # Step 4a: GET /api/settings
+    # Step 5a: GET /api/settings
     try:
         response = requests.get(f"{BASE_URL}/settings", timeout=10)
         if response.status_code != 200:
@@ -500,7 +614,7 @@ def test_settings_regression(token):
         settings = response.json()
         
         # Verify required fields
-        required_fields = ["company_name", "phone", "whatsapp", "address", "hours"]
+        required_fields = ["company_name", "phone", "whatsapp", "address", "hours", "maps_url", "instagram"]
         missing_fields = []
         for field in required_fields:
             if field not in settings:
@@ -515,11 +629,19 @@ def test_settings_regression(token):
         print(f"   phone: {settings.get('phone')}")
         print(f"   whatsapp: {settings.get('whatsapp')}")
         
+        # Verify settings_version=3
+        settings_version = settings.get("settings_version")
+        if settings_version == 3:
+            log_pass("GET /api/settings - settings_version=3")
+            print(f"   settings_version: {settings_version}")
+        else:
+            log_warning("GET /api/settings - settings_version", f"Expected 3, got {settings_version}")
+        
     except Exception as e:
         log_fail("GET /api/settings", str(e))
         return
     
-    # Step 4b: PUT /api/settings with same body
+    # Step 5b: PUT /api/settings with same body
     try:
         # Remove _id if present (MongoDB field)
         settings_copy = {k: v for k, v in settings.items() if k != "_id"}
@@ -591,13 +713,17 @@ def main():
     print(f"Admin: {ADMIN_EMAIL}")
     print("="*80)
     
-    # Get auth token
+    # Test 1: Seed verification (no auth needed)
+    test_seed_verification()
+    
+    # Get auth token for remaining tests
     token = get_auth_token()
     if not token:
-        print("\n❌ Cannot proceed without auth token")
+        print("\n❌ Cannot proceed with authenticated tests without auth token")
+        print_summary()
         return
     
-    # Run all tests
+    # Run all authenticated tests
     test_public_testimonials_array(token)
     test_services_crud_upload(token)
     test_gallery_crud_upload(token)
